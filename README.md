@@ -115,6 +115,7 @@ pnpm dev
 The API listens on `http://localhost:3000` by default. Every `/api/*` request needs
 `x-api-key: local-dev-secret-key` (or whatever you set `API_KEY` to in `.env`).
 
+Interactive API docs are at **http://localhost:3000/docs** (see [API docs (Scalar)](#api-docs-scalar)).
 
 > **Note on `pnpm prisma generate`:** this step downloads Prisma's query engine
 > binary the first time it runs, so it needs normal outbound internet access. If
@@ -138,16 +139,53 @@ full product CRUD including pagination via query string, an order lifecycle
 exercising the CQRS command/query split, a business-rule violation (returning an
 order that was never confirmed), and the `/metrics` endpoint.
 
+## API docs (Scalar)
+
+This project uses [Scalar](https://scalar.com) (`@scalar/express-api-reference`)
+instead of Swagger UI. Scalar renders the OpenAPI 3.1 document into a modern
+interactive reference — browse endpoints, inspect schemas, and try requests in
+the browser.
+
+| URL | What it is |
+| --- | --- |
+| http://localhost:3000/docs | Scalar UI (no auth required to view) |
+| http://localhost:3000/openapi.json | Raw OpenAPI 3.1 JSON |
+
+### Trying requests from Scalar
+
+1. Start the server with `pnpm dev`.
+2. Open http://localhost:3000/docs.
+3. Open **Authentication** / the `ApiKeyAuth` scheme and set the value to your
+   `API_KEY` (default: `local-dev-secret-key`).
+4. Pick an endpoint (e.g. `POST /api/products`) and send a request.
+
+`/health`, `/metrics`, `/docs`, and `/openapi.json` do not need an API key.
+Everything under `/api/*` does.
+
+### Where the docs live in code
+
+| File | Role |
+| --- | --- |
+| `src/presentation/http/openapi.ts` | OpenAPI 3.1 document (paths, schemas, security) |
+| `src/presentation/http/routes/docs.routes.ts` | Serves `/openapi.json` and mounts Scalar at `/docs` |
+| `src/presentation/http/app.ts` | Registers `docsRoutes()` as a public (unauthenticated) mount |
+
+When you add a new endpoint, update `openapi.ts` so Scalar stays in sync. The
+Zod schemas in `src/presentation/http/schemas/` remain the runtime validators;
+the OpenAPI doc is the human/UI contract.
 
 ## API reference
 
-All endpoints below (except `/health` and `/metrics`) require `x-api-key`. Request bodies accept JSON (`Content-Type: application/json`)
+All endpoints below (except `/health`, `/metrics`, `/docs`, and `/openapi.json`)
+require `x-api-key`. Request bodies accept JSON (`Content-Type: application/json`)
 or form/querystring-encoded payloads
 (`Content-Type: application/x-www-form-urlencoded`); list endpoints accept their
 filters as querystring params either way.
 
 | Method | Path                     | Description                                   |
 | ------ | ------------------------ | ---------------------------------------------- |
+| GET    | `/docs`                  | Scalar API reference UI. No auth required.     |
+| GET    | `/openapi.json`          | OpenAPI 3.1 document. No auth required.        |
 | GET    | `/health`                | Liveness + DB check. No auth required.         |
 | GET    | `/metrics`               | Prometheus metrics. No auth required.          |
 | POST   | `/api/products`          | Create a product.                              |
@@ -178,12 +216,14 @@ lists) or `{ "error": { "code": ..., "message": ..., "details": ... } }`.
 
 - **New feature**: add a domain invariant if needed, a Command/Query + handler in
   `application`, a route + controller method + Zod schema in `presentation/http`,
-  and register the handler on the bus in `container/container.ts`.
+  register the handler on the bus in `container/container.ts`, and update
+  `src/presentation/http/openapi.ts` so Scalar reflects the new endpoint.
 - **Real email provider**: implement `IEmailService`
   (`src/application/ports/IEmailService.ts`) against SES/SendGrid/Postmark, and swap
   the registration in `container.ts` — nothing else changes.
 - **Real auth**: replace `apiKeyAuth` with JWT/OAuth2 middleware; controllers are
-  unaffected either way.
+  unaffected either way. Update the `ApiKeyAuth` security scheme in `openapi.ts`
+  (and Scalar's auth config) to match.
 - **Postgres instead of SQLite**: change the `datasource` block in
   `prisma/schema.prisma` and `DATABASE_URL`; `PrismaProductRepository`/
   `PrismaOrderRepository` don't change.

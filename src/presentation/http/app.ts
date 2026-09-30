@@ -9,6 +9,7 @@ import { errorHandler } from "./middlewares/errorHandler";
 import { notFoundHandler } from "./middlewares/notFound";
 import { metricsMiddleware } from "./middlewares/metrics";
 import { healthRoutes, metricsRoutes } from "./routes/health.routes";
+import { docsRoutes } from "./routes/docs.routes";
 import { productRoutes } from "./routes/product.routes";
 import { orderRoutes } from "./routes/order.routes";
 import { ProductController } from "./controllers/ProductController";
@@ -19,7 +20,21 @@ export function createApp(container: AppContainer): Express {
   const app = express();
 
   app.disable("x-powered-by");
-  app.use(helmet());
+  // Scalar loads its UI from jsDelivr; loosen CSP just enough for /docs.
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+          "script-src": ["'self'", "https://cdn.jsdelivr.net", "'unsafe-inline'"],
+          "style-src": ["'self'", "https://cdn.jsdelivr.net", "'unsafe-inline'"],
+          "img-src": ["'self'", "data:", "https://cdn.jsdelivr.net"],
+          "font-src": ["'self'", "https://cdn.jsdelivr.net", "data:"],
+          "connect-src": ["'self'", "https://cdn.jsdelivr.net"],
+        },
+      },
+    }),
+  );
   app.use(cors());
 
   // Accepts JSON bodies and classic form/querystring-encoded bodies alike,
@@ -33,6 +48,7 @@ export function createApp(container: AppContainer): Express {
   // Public endpoints — no API key required (health checks & metrics scrapers can't supply one).
   app.use(healthRoutes(cradle.prisma));
   app.use(metricsRoutes(cradle.metrics));
+  app.use(docsRoutes());
 
   // Everything under /api requires a valid API key.
   app.use("/api", apiKeyAuth(cradle.config));
