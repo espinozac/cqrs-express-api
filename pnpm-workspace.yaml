@@ -1,0 +1,7 @@
+# pnpm v10+ stores project settings here (even for a single-package repo).
+# Allow native/postinstall scripts needed by Prisma and Vitest/esbuild.
+allowBuilds:
+  "@prisma/client": true
+  "@prisma/engines": true
+  prisma: true
+  esbuild: true

@@ -99,23 +99,24 @@ Two adapters implement the same repository ports (`src/domain/repositories`):
 ## Getting started
 
 ```bash
-npm install
+pnpm install
 cp .env.example .env
 
 # Generates the Prisma client types + engine, and creates dev.db with the schema.
-npx prisma generate
-npx prisma migrate dev --name init
+pnpm prisma generate
+pnpm prisma migrate dev --name init
 
 # Optional: seed a few sample products
-npm run db:seed
+pnpm db:seed
 
-npm run dev
+pnpm dev
 ```
 
 The API listens on `http://localhost:3000` by default. Every `/api/*` request needs
 `x-api-key: local-dev-secret-key` (or whatever you set `API_KEY` to in `.env`).
 
-> **Note on `npx prisma generate`:** this step downloads Prisma's query engine
+
+> **Note on `pnpm prisma generate`:** this step downloads Prisma's query engine
 > binary the first time it runs, so it needs normal outbound internet access. If
 > you're running this inside a network-restricted sandbox/CI image that blocks
 > `binaries.prisma.sh`, set `PERSISTENCE_DRIVER=memory` in `.env` instead — the API
@@ -128,7 +129,7 @@ The API listens on `http://localhost:3000` by default. Every `/api/*` request ne
 ### Running tests
 
 ```bash
-npm test
+pnpm test
 ```
 
 The suite (`tests/api.test.ts`) boots the real Express app (with the in-memory
@@ -137,12 +138,13 @@ full product CRUD including pagination via query string, an order lifecycle
 exercising the CQRS command/query split, a business-rule violation (returning an
 order that was never confirmed), and the `/metrics` endpoint.
 
+
 ## API reference
 
-All endpoints below (except `/health` and `/metrics`) require `x-api-key`. Request
-bodies accept JSON (`Content-Type: application/json`) or form/querystring-encoded
-payloads (`Content-Type: application/x-www-form-urlencoded`); list endpoints accept
-their filters as querystring params either way.
+All endpoints below (except `/health` and `/metrics`) require `x-api-key`. Request bodies accept JSON (`Content-Type: application/json`)
+or form/querystring-encoded payloads
+(`Content-Type: application/x-www-form-urlencoded`); list endpoints accept their
+filters as querystring params either way.
 
 | Method | Path                     | Description                                   |
 | ------ | ------------------------ | ---------------------------------------------- |

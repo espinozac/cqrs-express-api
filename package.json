@@ -2,6 +2,7 @@
   "name": "support-api",
   "version": "1.0.0",
   "description": "Clean Architecture REST API scaffold (CQRS, DI, validation, observability) for order/product/return support workflows",
+  "packageManager": "pnpm@11.5.1",
   "type": "commonjs",
   "main": "dist/main.js",
   "scripts": {
