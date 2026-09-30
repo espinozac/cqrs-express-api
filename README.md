@@ -85,6 +85,33 @@ Simple API-key auth: every `/api/*` request must send `x-api-key: <API_KEY>`
 (`src/presentation/http/middlewares/auth.ts`). This is deliberately minimal — swap it
 for JWT/OAuth2 middleware later without touching a single controller.
 
+### Security (current vs missing)
+
+What this scaffold **does** include:
+
+| Control | Behavior |
+| --- | --- |
+| API key | Shared secret via `x-api-key` on all `/api/*` routes |
+| Input validation | Zod schemas on body, query, and params before handlers run |
+| HTTP headers | [Helmet](https://helmetjs.github.io/) (CSP relaxed slightly so Scalar can load from jsDelivr) |
+| CORS | Enabled with `cors()` defaults (permissive — any origin) |
+| Fingerprinting | `X-Powered-By` disabled |
+
+Public (no API key): `/health`, `/metrics`, `/docs`, `/openapi.json`.
+
+What is **not** implemented yet — treat these as follow-ups before exposing the API beyond local/dev:
+
+| Gap | Why it matters | Suggested direction |
+| --- | --- | --- |
+| No JWT / OAuth2 / users / roles | One shared API key is not identity; anyone with the key can do everything | Replace `apiKeyAuth` with JWT (or OAuth2 bearer) middleware; add roles/scopes if you need least privilege |
+| No per-route permissions | Every authenticated caller can hit create, update, delete, and cancel alike | Authorize in middleware or use-case handlers (e.g. `admin` vs `support-read`) |
+| No rate limiting | Brute-force of the API key and abusive traffic are unchecked | Add something like `express-rate-limit` (and/or edge/WAF limits in production) |
+| Open CORS | Browser clients from any origin can call the API | Restrict `cors({ origin: [...] })` to known frontends |
+| Open `/metrics` (and docs) | Metrics can leak traffic patterns; docs advertise the full surface | Protect `/metrics` (and optionally `/docs` / `/openapi.json`) with auth, network policy, or an internal-only bind |
+| Single shared secret | Key rotation and audit of *who* called are hard | Prefer short-lived tokens; store secrets in a vault/secrets manager, never in git |
+
+Local defaults (`API_KEY=local-dev-secret-key` in `.env.example`) are for development only — use a strong unique key (and HTTPS) in any shared or production environment.
+
 ### Persistence
 
 Two adapters implement the same repository ports (`src/domain/repositories`):
@@ -223,7 +250,8 @@ lists) or `{ "error": { "code": ..., "message": ..., "details": ... } }`.
   the registration in `container.ts` — nothing else changes.
 - **Real auth**: replace `apiKeyAuth` with JWT/OAuth2 middleware; controllers are
   unaffected either way. Update the `ApiKeyAuth` security scheme in `openapi.ts`
-  (and Scalar's auth config) to match.
+  (and Scalar's auth config) to match. See [Security (current vs missing)](#security-current-vs-missing)
+  for rate limiting, CORS, roles, and locking down `/metrics` / docs.
 - **Postgres instead of SQLite**: change the `datasource` block in
   `prisma/schema.prisma` and `DATABASE_URL`; `PrismaProductRepository`/
   `PrismaOrderRepository` don't change.
